@@ -156,17 +156,7 @@ public class RpcApi {
         filters.add(new Filter(new Memcmp(offset, bytes)));
 
         ProgramAccountConfig programAccountConfig = new ProgramAccountConfig(filters);
-        return getProgramAccounts(account, programAccountConfig);
-    }
-
-    public List<ProgramAccount> getProgramAccountsBase64(PublicKey account, long offset, String bytes) throws RpcException {
-        List<Object> filters = new ArrayList<Object>();
-        Memcmp memcmp = new Memcmp(offset, bytes);
-
-        filters.add(new Filter(memcmp));
-
-        ProgramAccountConfig programAccountConfig = new ProgramAccountConfig(Encoding.base64);
-        programAccountConfig.setFilters(filters);
+        programAccountConfig.setEncoding(Encoding.base64);
         return getProgramAccounts(account, programAccountConfig);
     }
 
@@ -235,6 +225,7 @@ public class RpcApi {
         });
 
         ProgramAccountConfig programAccountConfig = new ProgramAccountConfig(filters);
+        programAccountConfig.setEncoding(Encoding.base64);
         params.add(programAccountConfig);
 
         List<AbstractMap> rawResult = client.call("getProgramAccounts", params, List.class);
@@ -516,6 +507,12 @@ public class RpcApi {
                 Commitment commitment = (Commitment) optionalParams.get("commitment");
                 blockConfig.setCommitment(commitment.getValue());
             }
+            if (optionalParams.containsKey("transactionDetails")) {
+                blockConfig.setTransactionDetails((String) optionalParams.get("transactionDetails"));
+            }
+            if (optionalParams.containsKey("rewards")) {
+                blockConfig.setRewards((Boolean) optionalParams.get("rewards"));
+            }
             params.add(blockConfig);
         }
 
@@ -563,6 +560,33 @@ public class RpcApi {
 
         Map<String, Object> parameterMap = new HashMap<>();
         parameterMap.put("mint", tokenMint.toBase58());
+        params.add(parameterMap);
+
+        Map<String, Object> encParams = new HashMap<>();
+        encParams.put("encoding", "jsonParsed");
+        params.add(encParams);
+
+        Map<String, Object> rawResult = client.call("getTokenAccountsByOwner", params, Map.class);
+
+        PublicKey tokenAccountKey;
+
+        try {
+            String base58 = (String) ((Map) ((List) rawResult.get("value")).get(0)).get("pubkey");
+            tokenAccountKey = new PublicKey(base58);
+
+        } catch (Exception ex) {
+            throw new RpcException("unable to get token account by owner");
+        }
+
+        return tokenAccountKey;
+    }
+
+    public PublicKey getTokenProgramAccountsByOwner(PublicKey owner, PublicKey programId) throws RpcException {
+        List<Object> params = new ArrayList<>();
+        params.add(owner.toBase58());
+
+        Map<String, Object> parameterMap = new HashMap<>();
+        parameterMap.put("programId", programId.toBase58());
         params.add(parameterMap);
 
         Map<String, Object> rawResult = client.call("getTokenAccountsByOwner", params, Map.class);

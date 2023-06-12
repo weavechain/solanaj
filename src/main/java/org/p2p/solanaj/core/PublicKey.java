@@ -1,13 +1,14 @@
 package org.p2p.solanaj.core;
 
 import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 
-import org.bitcoinj.core.Base58;
-import org.bitcoinj.core.Sha256Hash;
+import org.bitcoinj.base.Base58;
+import org.bitcoinj.base.Sha256Hash;
 import org.p2p.solanaj.utils.ByteUtils;
 import org.p2p.solanaj.utils.TweetNaclFast;
 
@@ -52,8 +53,12 @@ public class PublicKey {
     }
 
     @Override
-    public int hashCode() {
-        return Arrays.hashCode(pubkey);
+    public final int hashCode() {
+        int result = 17;
+        if (pubkey != null) {
+            result = 31 * result + Arrays.hashCode(pubkey);
+        }
+        return result;
     }
 
     @Override
@@ -93,6 +98,16 @@ public class PublicKey {
         }
 
         return new PublicKey(hash);
+    }
+
+    public static PublicKey createWithSeed(PublicKey fromPublicKey, String seed, PublicKey programId) {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        buffer.writeBytes(fromPublicKey.toByteArray());
+        buffer.writeBytes(seed.getBytes(StandardCharsets.UTF_8));
+        buffer.writeBytes(programId.toByteArray());
+        byte[] hash = Sha256Hash.hash(buffer.toByteArray());
+
+        return new PublicKey(Base58.encode(hash));
     }
 
     public static class ProgramDerivedAddress {

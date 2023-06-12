@@ -1,19 +1,19 @@
 package org.p2p.solanaj.core;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.HashMap;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class AccountKeysList {
     private HashMap<String, AccountMeta> accounts;
+
+    private final static Map<byte[], String> cachedKeys = new ConcurrentHashMap<>();
 
     public AccountKeysList() {
         accounts = new HashMap<String, AccountMeta>();
     }
 
     public void add(AccountMeta accountMeta) {
-        String key = accountMeta.getPublicKey().toString();
+        String key = getPublicKey(accountMeta);
 
         if (accounts.containsKey(key)) {
             if (!accounts.get(key).isWritable() && accountMeta.isWritable()) {
@@ -22,6 +22,10 @@ public class AccountKeysList {
         } else {
             accounts.put(key, accountMeta);
         }
+    }
+
+    private String getPublicKey(AccountMeta accountMeta) {
+        return cachedKeys.computeIfAbsent(accountMeta.getPublicKey().toByteArray(), (k) -> accountMeta.getPublicKey().toString());
     }
 
     public void addAll(Collection<AccountMeta> metas) {

@@ -9,6 +9,8 @@ import okhttp3.Response;
 import java.io.IOException;
 import java.lang.reflect.Type;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
 import com.squareup.moshi.JsonAdapter;
@@ -27,6 +29,10 @@ public class RpcClient {
     private OkHttpClient httpClient;
     private RpcApi rpcApi;
     private WeightedCluster cluster;
+
+    private static final ThreadLocal<JsonAdapter<RpcRequest>> rpcRequestJsonAdapter = ThreadLocal.withInitial(() -> new Moshi.Builder().build().adapter(RpcRequest.class));
+
+    private static final Map<String, Object> resultAdapter = new ConcurrentHashMap<>();
 
     public RpcClient(WeightedCluster cluster) {
         this.cluster = cluster;
@@ -71,18 +77,18 @@ public class RpcClient {
     public <T> T call(String method, List<Object> params, Class<T> clazz) throws RpcException {
         RpcRequest rpcRequest = new RpcRequest(method, params);
 
-        JsonAdapter<RpcRequest> rpcRequestJsonAdapter = new Moshi.Builder().build().adapter(RpcRequest.class);
-        JsonAdapter<RpcResponse<T>> resultAdapter = new Moshi.Builder().build()
-                .adapter(Types.newParameterizedType(RpcResponse.class, Type.class.cast(clazz)));
+        ThreadLocal<JsonAdapter<RpcResponse<T>>> resultAdapter = ((ThreadLocal<JsonAdapter<RpcResponse<T>>>)RpcClient.resultAdapter
+                .computeIfAbsent(clazz.getName(), (k) -> ThreadLocal.withInitial(() -> new Moshi.Builder().build()
+                        .adapter(Types.newParameterizedType(RpcResponse.class, Type.class.cast(clazz))))));
 
         Request request = new Request.Builder().url(getEndpoint())
-                .post(RequestBody.create(rpcRequestJsonAdapter.toJson(rpcRequest), JSON)).build();
+                .post(RequestBody.create(rpcRequestJsonAdapter.get().toJson(rpcRequest), JSON)).build();
 
         try {
             Response response = httpClient.newCall(request).execute();
             final String result = response.body().string();
             // System.out.println("Response = " + result);
-            RpcResponse<T> rpcResult = resultAdapter.fromJson(result);
+            RpcResponse<T> rpcResult = resultAdapter.get().fromJson(result);
 
             if (rpcResult.getError() != null) {
                 throw new RpcException(rpcResult.getError().getMessage());
@@ -112,7 +118,6 @@ public class RpcClient {
      * Returns RPC Endpoint based on a list of weighted endpoints
      * Weighted endpoints can be given a integer weight, with higher weights used more than lower weights
      * Total weights across all endpoints do not need to sum up to any specific number
-     *
      * @return String RPCEndpoint
      */
     private String getWeightedEndpoint() {
@@ -120,7 +125,7 @@ public class RpcClient {
         int randomMultiplier = cluster.endpoints.stream().mapToInt(WeightedEndpoint::getWeight).sum();
         double randomNumber = Math.random() * randomMultiplier;
         String currentEndpoint = "";
-        for (WeightedEndpoint endpoint : cluster.endpoints) {
+        for (WeightedEndpoint endpoint: cluster.endpoints) {
             if (randomNumber > currentNumber + endpoint.getWeight()) {
                 currentNumber += endpoint.getWeight();
             } else if (randomNumber >= currentNumber && randomNumber <= currentNumber + endpoint.getWeight()) {

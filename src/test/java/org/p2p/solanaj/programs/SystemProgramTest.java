@@ -6,7 +6,7 @@ import org.p2p.solanaj.core.TransactionInstruction;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
-import org.bitcoinj.core.Base58;
+import org.bitcoinj.base.Base58;
 
 public class SystemProgramTest {
 

@@ -29,7 +29,7 @@ public class Account {
         byte[] seed = MnemonicCode.toSeed(words, passphrase);
         DeterministicKey masterPrivateKey = HDKeyDerivation.createMasterPrivateKey(seed);
         DeterministicHierarchy deterministicHierarchy = new DeterministicHierarchy(masterPrivateKey);
-        DeterministicKey child = deterministicHierarchy.get(HDUtils.parsePath("M/501H/0H/0/0"), true, true);
+        DeterministicKey child = deterministicHierarchy.get(HDPath.parsePath("M/501H/0H/0/0"), true, true);
         TweetNaclFast.Signature.KeyPair keyPair = TweetNaclFast.Signature.keyPair_fromSeed(child.getPrivKeyBytes());
         return new Account(keyPair);
     }

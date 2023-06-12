@@ -5,7 +5,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.bitcoinj.core.Base58;
+import org.bitcoinj.base.Base58;
 import org.p2p.solanaj.utils.ShortvecEncoding;
 import org.p2p.solanaj.utils.TweetNaclFast;
 
@@ -30,6 +30,12 @@ public class Transaction {
 
     public void setRecentBlockHash(String recentBlockhash) {
         message.setRecentBlockHash(recentBlockhash);
+    }
+
+    public Message getMessage() { return message; }
+
+    public List<String> getSignatures() {
+        return signatures;
     }
 
     public void sign(Account signer) {
