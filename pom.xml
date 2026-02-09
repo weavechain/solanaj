@@ -4,7 +4,7 @@
   <groupId>org.p2p</groupId>
   <artifactId>solanaj</artifactId>
   <packaging>jar</packaging>
-  <version>1.14.2</version>
+  <version>1.14.3</version>
   <name>solanaj</name>
   <url>http://maven.apache.org</url>
   <build>
